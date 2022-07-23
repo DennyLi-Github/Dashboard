@@ -1,0 +1,316 @@
+---
+title: "The effect of Great Recession"
+author: "Denny Li"
+date: "`r Sys.Date()`"
+
+runtime: shiny
+
+output: 
+  flexdashboard::flex_dashboard:
+    horizontal_layout: fill
+---
+
+```{r setup, include = FALSE, echo=FALSE}
+
+if (!require("tidyverse")) install.packages("tidyverse")
+library(tidyverse)
+
+if (!require("DT")) install.packages("DT")
+library(DT)
+
+if (!require("flexdashboard")) install.packages("flexdashboard")
+library(flexdashboard)
+
+if (!require("plotly")) install.packages("plotly")
+library(plotly)
+
+if (!require("lubridate")) install.packages("lubridate")
+library(lubridate)
+
+if (!require("kableExtra")) install.packages("kableExtra")
+library(kableExtra)
+
+if (!require("scales")) install.packages("scales")
+library(scales)
+
+if (!require("knitr")) install.packages("knitr")
+library(knitr)
+
+if (!require("formattable")) install.packages("formattable")
+library(formattable)
+
+if (!require("shiny")) install.packages("shiny")
+library(shiny)
+
+if (!require("shinydashboard")) install.packages("shinydashboard")
+library(shinydashboard)
+
+
+setwd("C:/Users/liden/Desktop/R final submission/R final submission")
+
+load("Assignment.RData")
+
+```
+
+# Housing
+## Housing Price by state
+
+```{r}
+
+housing_pricefivestates <- Housing %>% filter(RegionName %in% c("California", "Florida", "Massachusetts", "Michigan", "North Carolina")) 
+
+housing_pricefivestates$Date <- as.POSIXct.default(housing_pricefivestates$Date, format="%m/%d/%Y")
+
+
+housing_pricefivestates$Date <- format(housing_pricefivestates$Date, format = "%Y")
+
+housing_pricefivestates <- housing_pricefivestates %>% arrange(Date)
+
+
+#housing_pricefivestates <- housing_pricefivestates %>% mutate(Year=year(Date))
+
+#housing_price <- housing_pricefivestates %>%
+        #group_by(RegionName, Year) %>%
+  #summarise(
+       #averageprice = mean(`Home Value Index (all homes)`))
+
+#housing_pricefilter <- housing_price %>% filter(Year > "2004" & Year < "2011")
+
+
+#aChart <-  ggplot(housing_pricefilter, aes(x = Year, y = averageprice)) +
+    #geom_line(aes(color=RegionName))+labs(title = "Average home price by #state")+geom_vline(aes(xintercept=as.numeric("2007")), lty=2)+geom_vline(aes(xintercept=as.numeric("2009")), lty=2)
+
+#ggplotly(aChart)
+
+
+
+
+
+
+date <- as.POSIXct("02/03/2014 10:41:00", format = "%m/%d/%Y %H:%M:%S")
+
+format(date, format = "%Y")
+
+
+meeting <- lubridate::ymd_hms("2011-07-01 09:00:00", tz = "Pacific/Auckland")
+
+lubridate::with_tz(meeting, "America/Chicago")
+
+```
+
+## Column 2
+### Housing price by state bar graph
+
+```{r}
+
+```
+
+# housing with selection
+## column {.sidebar }
+
+```{r}
+#HousingState = unique(housing_pricefilter$RegionName) %>% factor()
+
+#selectInput(
+ # inputId = "HousingState",
+ # label = "Please Select HousingState",
+  #choices =  HousingState,
+  #selected = HousingState[0]
+ # )
+
+
+#renderPrint(input$HousingState)
+
+```
+
+
+
+```{r}
+
+sliderInput(
+  inputId='RangeYears',
+  label='Select Years to display',
+  min = unique(year(housing_pricefivestates$Date)) %>% min(),
+  max = unique(year(housing_pricefivestates$Date)) %>% max(),
+  value = c(
+    unique(year(housing_pricefivestates$Date)) %>% min(),
+    unique(year(housing_pricefivestates$Date)) %>% max()),
+  step = 1
+)
+
+renderPrint(
+  paste0(input$RangeYears[1],input$RangeYears[2] ))
+
+list(housing_pricefivestates)
+
+```
+
+
+
+```{r}
+
+housing_pricefivestates$Date <- format(housing_pricefivestates$Date, format = "%m/%d/%Y")
+
+housing_pricefivestates$Date <- as.numeric(housing_pricefivestates$Date)
+
+housing_pricefivestates <- housing_pricefivestates %>%
+        group_by(RegionName, Date) %>%
+  summarise(
+       averageprice = mean(`Home Value Index (all homes)`))
+
+ ggplot(housing_pricefivestates, aes(x = Date, y = `averageprice`)) +
+    geom_line(aes(color=RegionName))+labs(title = "Average home price by state")
+
+```
+
+
+```{r}
+
+renderPlotly({
+  housing_pricefivestates <- housing_pricefivestates %>%
+  filter(
+      year(housing_pricefivestates$Date) >= input$RangeYear[1] & 
+      year(housing_pricefivestates$Date) <= input$RangeYear[2]
+    ) %>%
+    ggplot(aes(x = year(Date), 
+               y =Sales)) +
+      geom_line(aes(color=RegionName))+
+      scale_fill_brewer(palette="Set1")+
+      labs(
+        title = str_c(
+          input$RangeYear[1], 
+          " : ", 
+          input$RangeYear[2], 
+          "Average Home Price to Different States"
+          ), 
+        x= "Year",
+        y = "Average Home Price",
+        fill="RegionName")
+    ggplotly(housing_pricefivestates)
+})
+
+
+```
+
+
+
+## graph
+
+```{r}
+
+renderPlotly({theHousingChart <- housing_pricefilter %>% 
+        filter(RegionName == input$HousingState) %>% ggplot(mapping = aes(x = Year, y = averageprice)) +
+    geom_col(aes(fill=RegionName), position = "dodge")+labs(title = "Average home price by state")+geom_smooth()
+ ggplotly(theHousingChart)})
+
+```
+
+## Average home price table
+
+```{r}
+
+
+renderDataTable(housing_pricefilter %>% 
+           filter(RegionName == input$HousingState) 
+           ) 
+
+```
+
+
+
+
+# Median Income
+## Datatable
+
+```{r}
+
+Income %>% 
+datatable(colnames = c('State', 'Year', 'Median income'), 
+          rownames = FALSE, class = 'stripe hover', 
+          caption = "Median Income Table")
+
+```
+
+## Plot
+
+```{r}
+
+ggplot(Income, aes(Year, `Median income`)) +
+    geom_line(aes(color=State), size=1)+
+    labs(title = "Median Income by state between 2006 to 2010")+
+   theme(plot.title = element_text(size = 9))+geom_vline(aes(xintercept=as.numeric("2007")), lty=2)+
+  geom_vline(aes(xintercept=as.numeric("2009")), lty=2)
+
+```
+
+# Crime rate
+## column {.sidebar }
+
+```{r}
+selectInput(
+	inputId = "VariablesSelected",
+	label = "Please select the Variable",
+	choices = c(Crime_fivestates %>% select(4:6) %>% names())
+)
+```
+
+## crime rate
+
+```{r}
+renderPlot({
+
+myData <- Crime_fivestates %>%
+  	select(State, Year, input$VariablesSelected)
+
+ggplot(myData,
+		aes_string( 
+			x= "Year",
+			y = input$VariablesSelected))+
+	geom_col(aes(fill=State), alpha=0.6, position = "dodge")+
+				labs(
+      title = "Crime by state",
+      subtitle = input$VariablesSelected,
+      x= "Year",
+      y = input$VariablesSelected)+
+	theme(
+		plot.title = element_text(
+			margin = margin(t = 5, b = 5), size=10),
+		legend.position = 'right'
+		)
+
+})
+
+```
+
+# Unemployment
+## Datatable
+
+```{r}
+
+Unemployment$DATE <- as.Date(Unemployment$DATE, format="%m/%d/%Y")
+
+Unemployment_fivestates <- Unemployment %>%
+        group_by(State, Year=year(DATE)) %>%
+  summarise(avgUnemployRate = mean(`Unemployment Rate`))
+
+Unemployment_fivestates %>% 
+datatable(colnames = c('State', 'Year', 'avgUnemployRate'), 
+          rownames = FALSE, class = 'stripe hover') %>% formatRound(3, digits = 2)
+
+```
+
+## Plot
+
+```{r}
+
+ggplot(Unemployment_fivestates, aes(Year, avgUnemployRate)) +
+    geom_area(aes(fill = State), size=1)+
+    labs(title = "Unemployment Rate by state between 2006 to 2010")+
+  geom_vline(aes(xintercept=as.numeric("2007")), lty=2)+
+  geom_vline(aes(xintercept=as.numeric("2009")), lty=2)+
+     theme(plot.title = element_text(size = 9))
+
+
+
+```
+
